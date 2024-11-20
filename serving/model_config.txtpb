@@ -1,0 +1,18 @@
+# proto-message: ModelServerConfig
+model_config_list {
+  config {
+    name: 'elixr_c'
+    base_path: '/model/elixr_c/'
+    model_platform: 'tensorflow'
+  }
+  config {
+    name: 'qformer'
+    base_path: '/model/qformer/'
+    model_platform: 'tensorflow'
+  }
+  config {
+    name: 'tokenizer'
+    base_path: '/model/tokenizer/'
+    model_platform: 'tensorflow'
+  }
+}
