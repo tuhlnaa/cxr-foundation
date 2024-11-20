@@ -27,7 +27,7 @@ their ability to build AI models for chest X-ray image analysis.
 ## Contributing
 
 We are open to bug reports, pull requests (PR), and other contributions. Please
-see [CONTRIBUTING](./docs/CONTRIBUTING.md) for details.
+see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## License
 

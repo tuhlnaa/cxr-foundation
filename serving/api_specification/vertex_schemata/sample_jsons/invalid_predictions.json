@@ -1,0 +1,35 @@
+{
+  "invalid_missing_model_version": {
+    "result": {
+      "embedding_vector": [0.1, 0.2, 0.3, 0.4]
+    }
+  },
+  "invalid_missing_embedding_vector": {
+    "model_version": "1.2.3",
+    "result": {
+    }
+  },
+  "invalid_empty_embedding_vector": {
+    "model_version": "1.2.3",
+    "result": {
+      "embedding_vector": []
+    }
+  },
+  "invalid_both_result_and_error": {
+    "model_version": "1.0.0",
+    "result": {
+      "embedding_vector": [0.1, 0.2, 0.3, 0.4]
+    },
+    "error": {
+      "code": "UNSUPPORTED_INPUT_TYPE",
+      "description": "Try a different input type."
+    }
+  },
+  "invalid_too_long_error_desc": {
+    "model_version": "1.2.3",
+    "error": {
+      "code": "UNSUPPORTED_INPUT_TYPE",
+      "description": "This error description is 101 characters long to demonstrate a violation of the maxLength constraint in the updated OpenAPI specification."
+    }
+  }
+}

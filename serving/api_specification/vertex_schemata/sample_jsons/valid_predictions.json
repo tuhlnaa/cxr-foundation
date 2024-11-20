@@ -1,0 +1,15 @@
+{
+  "success_case": {
+    "model_version": "1.2.3",
+    "result": {
+      "embedding_vector": [0.1, 0.2, 0.3, 0.4]
+    }
+  },
+  "error_case": {
+    "model_version": "1.0.0",
+    "error": {
+      "code": "DICOM_NOT_FOUND",
+      "description": "The DICOM image was not found."
+    }
+  }
+}

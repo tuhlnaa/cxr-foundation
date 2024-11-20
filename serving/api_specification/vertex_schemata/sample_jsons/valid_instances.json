@@ -1,0 +1,48 @@
+{
+  "valid_with_dicom_path_and_bearer_token_and_extensions": {
+    "dicom_path": "https://dicomweb-store-uri/studies/1.2.3.4.5.6.7.8.9/series/1.2.3.4.5.6.7.8.10/instances/1.2.3.4.5.6.7.8.11",
+    "bearer_token": "your-bearer-token",
+    "extensions": {
+      "some_key": {
+        "some_property": "some_value",
+        "some_other_property": 123
+      },
+      "some_other_key": {
+        "some_property": true,
+        "some_other_property": 123
+      }
+    }
+  },
+  "valid_with_image_files_uri_and_bearer_token_and_extensions": {
+    "image_file_uri": "gs://your-bucket/path/to/cxr.dcm",
+    "bearer_token": "your-bearer-token",
+    "extensions": {
+      "some_key": "some_value",
+      "some_other_key": "some_other_value"
+    }
+  },
+  "valid_with_input_bytes": {
+    "input_bytes": "base64-encoded-image-data",
+    "extensions": {
+      "some_key": "some_value",
+      "some_other_key": 123
+    }
+  },
+  "minimal_valid_with_dicom_path_and_bearer_token": {
+    "dicom_path": "https://dicomweb-store-uri/studies/1.2.3.4.5.6.7.8.9/series/1.2.3.4.5.6.7.8.10/instances/1.2.3.4.5.6.7.8.11",
+    "bearer_token": "your-bearer-token"
+  },
+  "minimal_valid_with_image_file_uri_and_bearer_token": {
+    "image_file_uri": "gs://your-bucket/path/to/cxr.png",
+    "bearer_token": "your-bearer-token"
+  },
+  "minimal_valid_with_dicom_path": {
+    "dicom_path": "https://dicomweb-store-uri/studies/1.2.3.4.5.6.7.8.9/series/1.2.3.4.5.6.7.8.10/instances/1.2.3.4.5.6.7.8.11"
+  },
+  "minimal_valid_with_image_file_uri": {
+    "image_file_uri": "gs://your-bucket/path/to/cxr.png"
+  },
+  "minimal_valid_with_input_bytes": {
+    "input_bytes": "base64-encoded-image-data"
+  }
+}
