@@ -14,23 +14,28 @@
 
 title: CXREmbeddingRequest
 type: object
-oneOf:
-  - type: object
-    required: [dicom_path]
-  - type: object
-    required: [image_file_uri]
-  - type: object
-    required: [input_bytes]
-    not:
-      required: [bearer_token]
+additionalProperties: false
+type: object
+oneOf: # The request must match exactly one of the following patterns:
+- required: [dicomweb_uri] # A request with at least a dicomweb_uri, possible also a prompt_query
+- required: [gcs_uri]      # A request with at least a gcs_uri, possible also a prompt_query
+- required: [input_bytes]  # A request with at least input_bytes, possible also a prompt_query
+  not:
+    required: [bearer_token] # bearer_token should not be present along with input_bytes
+- required: [prompt_query] # A request with a prompt_query and no image data
+  not:
+    anyOf:
+      - required: [dicomweb_uri]
+      - required: [gcs_uri]
+      - required: [input_bytes]
 properties:
-  dicom_path:
+  dicomweb_uri:
     type: string
     pattern: ^https://.+/studies/[0-9\.]{1,64}/series/[0-9\.]{1,64}/instances/[0-9\.]{1,64}$
     description: >
       The path to a DICOM SOP Instance in a DICOMWeb Store. Provide the URI in this format:
       https://{DICOMWEB-STORE-URI}/studies/{STUDY-UID}/series/{SERIES-UID}/instances/{INSTANCE-UID}
-  image_file_uri:
+  gcs_uri:
     type: string
     pattern: ^gs://.+/[^/]+\.[^/]+$
     description: >
@@ -42,6 +47,10 @@ properties:
     format: byte
     description: >
       Input data as a base64-encoded string. Refer to the API specification for details.
+  prompt_query:
+    type: string
+    description: >
+      String to be be used for text embeddings.
   bearer_token:
     type: string
     description: >

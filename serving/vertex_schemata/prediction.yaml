@@ -15,62 +15,46 @@
 title: CXREmbeddingResponse
 type: object
 description: The generated model result (i.e. computed vector representaion of the input data).
-required:
-- model_version
+additionalProperties: false
 oneOf:
-  - type: object
-    required: [result]
-  - type: object
-    required: [error]
+  - anyOf:
+    - required: [general_img_emb]
+    - required: [contrastive_img_emb]
+    - required: [contrastive_txt_emb]
+    not:
+      required: [error]
+  - required: [error]
+    not:
+      anyOf:
+        - required: [general_img_emb]
+        - required: [contrastive_img_emb]
+        - required: [contrastive_txt_emb]
 properties:
-  model_version:
-    type: string
-    description: >
-      String identifying the model version used to generate the result. Use the this to find out
-      more about the model in the model card and track provenance of the result.
-  result:
-    $ref: '#/components/result'
-  error:
-    $ref: '#/components/error'
-
-components:
+  general_img_emb:
+    type: array
+    minItems: 1
+    description: Vector representation of the input image.
+    items:
+      type: number
+      format: float
+  contrastive_img_emb:
+    type: array
+    minItems: 1
+    description: Vector representation of the input image.
+    items:
+      type: number
+      format: float
+  contrastive_txt_emb:
+    type: array
+    minItems: 1
+    description: Vector representation of the input image.
+    items:
+      type: number
+      format: float
   error:
     type: object
-    description: The error response if an exception occurred while processing the request.
-    required:
-      - code
     properties:
-      code:
-        type: string
-        description: >
-          List of known error codes.
-        enum:
-        - TOO_MANY_REQUESTS
-        - INTERNAL_ERROR
-        - UNSUPPORTED_INPUT_TYPE
-        - DICOM_NOT_FOUND
-        - INVALID_CREDENTIALS
-        - ERROR_LOADING_DICOM
-        - INFERENCE_TIME_OUT
-        - INVALID_REQUEST_FIELD
       description:
         type: string
         description: A human-readable explanation of the error.
-        maxLength: 100
-
-  result:
-    type: object
-    required:
-      - embedding_vector
-    properties:
-      embedding_vector:
-        type: array
-        minItems: 1
-        description: Vector representation of the input image.
-        items:
-          $ref: '#/components/embedding_value'
-
-  embedding_value:
-    type: number
-    format: float
-    description: Single embedding value.
+        maxLength: 1024
