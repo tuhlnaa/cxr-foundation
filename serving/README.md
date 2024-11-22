@@ -20,10 +20,10 @@ The serving container can be used in both online and batch prediction workflows:
 
 ## Description of select files and folders
 
-*   [`data_processing/`](./data_processing/README.md): A library for data
+*   [`data_processing/`](./data_processing): A library for data
     retrieval and processing.
 
-*   [`serving_framework/`](./serving_framework/README.md): A library for
+*   [`serving_framework/`](./serving_framework): A library for
     implementing Vertex AI-compatible HTTP servers.
 
 *   [`vertex_schemata/`](./vertex_schemata): Folder containing YAML files that
@@ -39,7 +39,7 @@ The serving container can be used in both online and batch prediction workflows:
     TensorFlow [SavedModel(s)](https://www.tensorflow.org/guide/saved_model)
     locally and launches the TensorFlow server and the frontend HTTP server.
 
-*   [`model_config.txtpb`](/model_config.txtpb): The
+*   [`model_config.txtpb`](./model_config.txtpb): The
     [protocol buffer](https://protobuf.dev/) message used in `entrypoint.sh` to
     configure the TensorFlow Model server to run multiple models.
 
