@@ -194,9 +194,9 @@ class PredictorTest(parameterized.TestCase):
         "input_mask": np.zeros([1, 128], dtype=np.float32),
     }
     mock_qformer_output = {
-        "all_contrastive_img_emb": np.array([[4]]),
-        "img_emb": np.array([[5]]),
-        "contrastive_txt_emb": np.array([[6]]),
+        "all_contrastive_img_emb": np.array([[[4]]]),
+        "img_emb": np.array([[[5]]]),
+        "contrastive_txt_emb": np.array([[[6]]]),
     }
     # Filter outputs for expected keys.
     # We ensure the correct keys are requested in the mock_model_runner call
@@ -310,18 +310,19 @@ class PredictorTest(parameterized.TestCase):
     if "contrastive_txt_emb" in mock_qformer_output:
       expected_response["contrastive_txt_emb"] = mock_qformer_output[
           "contrastive_txt_emb"
-      ]
+      ][0]
     if "all_contrastive_img_emb" in mock_qformer_output:
       expected_response["contrastive_img_emb"] = mock_qformer_output[
           "all_contrastive_img_emb"
-      ]
+      ][0]
     if "img_emb" in mock_qformer_output:
-      expected_response["general_img_emb"] = mock_qformer_output["img_emb"]
+      expected_response["general_img_emb"] = mock_qformer_output["img_emb"][0]
 
-    self.assertEqual(
-        response,
-        {"predictions": [expected_response]},
-    )
+    # Check that the response is as expected.
+    # Note that we do a key-by-key comparison with a tolist() comparison,
+    # since numpy doesn't consider shape to be part of equality.
+    for key, value in response["predictions"][0].items():
+      self.assertEqual(value, expected_response[key].tolist())
 
   # Test for multiple instances.
   # This assumes the processing of individual instances is sufficiently tested
@@ -482,12 +483,12 @@ class PredictorTest(parameterized.TestCase):
     }
 
     mock_qformer_output_1 = {
-        "all_contrastive_img_emb": np.array([[4]]),
+        "all_contrastive_img_emb": np.array([[[4]]]),
         "img_emb": np.array([[5]]),
         "contrastive_txt_emb": np.array([[6]]),
     }
     mock_qformer_output_2 = {
-        "all_contrastive_img_emb": np.array([[7]]),
+        "all_contrastive_img_emb": np.array([[[7]]]),
         "img_emb": np.array([[8]]),
         "contrastive_txt_emb": np.array([[9]]),
     }

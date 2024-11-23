@@ -33,21 +33,27 @@ properties:
   general_img_emb:
     type: array
     minItems: 1
-    description: Vector representation of the input image.
+    description: 2d-Vector representation of the input image.
     items:
-      type: number
-      format: float
+      type: array
+      minItems: 1
+      items:
+        type: number
+        format: float
   contrastive_img_emb:
     type: array
     minItems: 1
-    description: Vector representation of the input image.
+    description: 2d-Vector representation of the input image for contrastive learning
     items:
-      type: number
-      format: float
+      type: array
+      minItems: 1
+      items:
+        type: number
+        format: float
   contrastive_txt_emb:
     type: array
     minItems: 1
-    description: Vector representation of the input image.
+    description: Vector representation of the input text for contrastive learning
     items:
       type: number
       format: float

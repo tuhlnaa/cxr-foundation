@@ -180,8 +180,9 @@ class Predictor:
 
     # Construct final response.
     # Apply key renamings where necessary.
+    # Squash trivial outer dimension.
     return {
-        _OUTPUT_KEY_RENAMINGS.get(key, key): value.tolist()
+        _OUTPUT_KEY_RENAMINGS.get(key, key): value.tolist()[0]
         for key, value in outputs.items()
     }
 
