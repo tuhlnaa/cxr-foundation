@@ -24,8 +24,8 @@ import tensorflow as tf
 from absl.testing import absltest
 from absl.testing import parameterized
 from data_processing import data_processing_lib
-from serving_framework import model_runner
-import predictor
+from serving.serving_framework import model_runner
+from serving import predictor
 
 _TEST_IMAGE_EXAMPLE = tf.train.Example(
     features=tf.train.Features(

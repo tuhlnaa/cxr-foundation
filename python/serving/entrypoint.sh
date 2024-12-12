@@ -43,13 +43,13 @@ echo "Prediction container start, launching model server"
 /usr/bin/tensorflow_model_server \
     --port=8500 \
     --rest_api_port="$MODEL_REST_PORT" \
-    --model_config_file=model_config.txtpb \
+    --model_config_file=serving/model_config.txtpb \
     --xla_cpu_compilation_enabled=true &
 export MODEL_PID=$!
 
 echo "Launching front end"
 
-/server-env/bin/python3.12 server_gunicorn.py --alsologtostderr \
+/server-env/bin/python3.12 -m serving.server_gunicorn --alsologtostderr \
     --verbosity=1 &
 export SERVER_PID=$!
 
