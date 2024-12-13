@@ -1,1 +1,2 @@
 -r serving/requirements.txt
+-r clientside/requirements.txt
