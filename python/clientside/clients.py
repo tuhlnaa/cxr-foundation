@@ -22,8 +22,10 @@ HuggingFaceCxrClient downloads Hugging Face models and run them locally.
 """
 
 import abc
+import base64
 from collections.abc import Sequence
 import dataclasses
+import io
 import os
 
 import google.auth
@@ -31,11 +33,13 @@ import google.auth.transport.requests
 from google.cloud import aiplatform
 import huggingface_hub
 import numpy as np
+from PIL import Image
 import tensorflow as tf
 import tensorflow_hub as tf_hub
 import tensorflow_text  # pylint: disable=unused-import
 
 from data_processing import data_processing_lib
+
 
 _BERT_TF_HUB_PATH = 'https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3'
 _BERT_SEP_TOKEN_ID = 102
@@ -95,6 +99,12 @@ class CxrClient(abc.ABC):
       self, gcs_uris: Sequence[str]
   ) -> Sequence[ImageEmbedding]:
     """Returns a sequence of image embeddings corresponding to the sequence of GCS uris given."""
+
+  @abc.abstractmethod
+  def get_image_embeddings_from_images(
+      self, images: Sequence[Image]
+  ) -> Sequence[ImageEmbedding]:
+    """Returns a sequence of image embeddings corresponding to the sequence of PIL Images given."""
 
 
 def _get_gcloud_creds() -> google.auth.credentials.Credentials:
@@ -156,6 +166,29 @@ class VertexCxrClient(CxrClient):
         instances=[
             {'gcs_uri': gcs_uri, 'bearer_token': creds.token}
             for gcs_uri in gcs_uris
+        ]
+    )
+    return [ImageEmbedding(**prediction) for prediction in response.predictions]
+
+  @classmethod
+  def _image_to_base64_encoded_bytestring(cls, image: Image.Image) -> str:
+    """Converts a PIL Image to a byte string."""
+    with io.BytesIO() as output:
+      image.save(output, format='PNG')
+      return base64.b64encode(output.getvalue()).decode('utf-8')
+
+  def get_image_embeddings_from_images(
+      self, images: Sequence[Image]
+  ) -> Sequence[ImageEmbedding]:
+    """Returns a sequence of image embeddings corresponding to the sequence of base-64 encoded images given."""
+    response = self._endpoint.predict(
+        instances=[
+            {
+                'input_bytes': (
+                    VertexCxrClient._image_to_base64_encoded_bytestring(image)
+                ),
+            }
+            for image in images
         ]
     )
     return [ImageEmbedding(**prediction) for prediction in response.predictions]
@@ -254,7 +287,7 @@ class HuggingFaceCxrClient(CxrClient):
         for dicomweb_uri in dicomweb_uris
     ]
 
-  def _get_image_example(self, gcs_uri: str) -> tf.train.Example:
+  def _get_image_example_from_gcs(self, gcs_uri: str) -> tf.train.Example:
     """Retrieves an image from GCS and converts it to a TF example.
 
     Args:
@@ -285,7 +318,7 @@ class HuggingFaceCxrClient(CxrClient):
         PNG file.
     """
 
-    example = self._get_image_example(gcs_uri)
+    example = self._get_image_example_from_gcs(gcs_uri)
     elixr_c_output = self._elixr_c_model.signatures['serving_default'](
         input_example=tf.constant([example.SerializeToString()])
     )
@@ -311,6 +344,35 @@ class HuggingFaceCxrClient(CxrClient):
         a PNG file.
     """
     return [self._get_image_embedding_from_gcs(gcs_uri) for gcs_uri in gcs_uris]
+
+  def _get_image_embedding_from_image(self, image: Image) -> ImageEmbedding:
+    """Converts a PIL Image to an ImageEmbedding."""
+    with io.BytesIO() as buffer:
+      image.save(buffer, format='PNG')
+      image_bytes = buffer.getvalue()
+    image_example = data_processing_lib.process_xray_image_to_tf_example(
+        image_bytes
+    )
+    elixr_c_output = self._elixr_c_model.signatures['serving_default'](
+        input_example=tf.constant([image_example.SerializeToString()])
+    )
+    model_output = self._qformer_model.signatures['serving_default'](
+        image_feature=elixr_c_output['feature_maps_0'].numpy().tolist(),
+        ids=np.zeros(_TEXT_EMBEDDING_SHAPE, dtype=np.int32).tolist(),
+        paddings=np.zeros(_TEXT_EMBEDDING_SHAPE, dtype=np.float32).tolist(),
+    )
+    return ImageEmbedding(
+        general_img_emb=model_output['img_emb'].numpy()[0].tolist(),
+        contrastive_img_emb=(
+            model_output['all_contrastive_img_emb'].numpy()[0].tolist()
+        ),
+    )
+
+  def get_image_embeddings_from_images(
+      self, images: Sequence[Image]
+  ) -> Sequence[ImageEmbedding]:
+    """Returns a sequence of image embeddings corresponding to the sequence of base-64 encoded images given."""
+    return [self._get_image_embedding_from_image(image) for image in images]
 
 
 def make_hugging_face_client(model_dir: str) -> HuggingFaceCxrClient:
