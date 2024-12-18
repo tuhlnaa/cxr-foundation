@@ -1,0 +1,6 @@
+google-cloud-aiplatform~=1.74.0
+tensorflow-hub~=0.16.1
+tensorflow-text~=2.18.0
+huggingface-hub~=0.26.5
+grpcio~=1.68.1
+-r ../data_processing/requirements.in
