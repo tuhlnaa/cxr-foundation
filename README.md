@@ -1,10 +1,9 @@
 # Chest X-Ray Foundation
 
 CXR Foundation is a machine learning (ML) model that produces embeddings based
-on images of chest X-rays. The embeddings can be used to
-[efficiently build AI models](https://en.wikipedia.org/wiki/Transfer_learning)
-for chest X-ray related tasks, requiring less data and less compute than having
-to fully train a model without the embeddings.
+on images of chest X-rays. The embeddings can be used to efficiently build AI
+models for chest X-ray related tasks, requiring less data and less compute than
+having to fully train a model without the embeddings.
 
 The model has been optimized for chest X-rays, but researchers have reported
 success using it for other types of X-rays, including X-rays of other body parts
@@ -27,7 +26,7 @@ their ability to build AI models for chest X-ray image analysis.
 
 *   Explore this repository, which contains [notebooks](./notebooks) for using
     the model from Hugging Face and Vertex AI as well as the
-    [implementation](./serving) of the container that you can deploy to Vertex
+    [implementation](./python/serving) of the container that you can deploy to Vertex
     AI.
 
 *   Visit the model on
