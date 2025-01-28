@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cxr-foundation"
+version = "2.0.0"
+description = "Chest X-ray Foundation Models"
+authors = [
+    {name = "Google Health AI Developer Foundations Team"}
+]
+dynamic = ["dependencies"]
+
+[project.urls]
+Homepage = "https://developers.google.com/health-ai-developer-foundations"
+Documentation = "https://developers.google.com/health-ai-developer-foundations/overview"
+Repository = "https://github.com/Google-Health/cxr-foundation"
+Issues = "https://github.com/Google-Health/cxr-foundation/issues"
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = [
+    "clientside/requirements.txt",
+    "serving/requirements.txt"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "clientside",
+    "data_processing",
+    "serving",
+    "serving/serving_framework"
+]
