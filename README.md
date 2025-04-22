@@ -1,5 +1,11 @@
 # Chest X-Ray Foundation
 
+[![PyTorch](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python)](https://pytorch.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.3%2B-EE4C2C?logo=pytorch)](https://pytorch.org/)
+[![GitHub repo size](https://img.shields.io/github/repo-size/tuhlnaa/cxr-foundation-torch?label=Repo%20size)](https://github.com/tuhlnaa/cxr-foundation-torch)
+
+<br>
+
 CXR Foundation is a machine learning (ML) model that produces embeddings based
 on images of chest X-rays. The embeddings can be used to efficiently build AI
 models for chest X-ray related tasks, requiring less data and less compute than
