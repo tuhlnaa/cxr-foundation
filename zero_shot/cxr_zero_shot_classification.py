@@ -13,20 +13,17 @@ The embeddings used are text-aligned image embeddings from the Q-former output i
 """
 
 import os
+import argparse
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
-
-# Optional imports for interactive use
-try:
-    import ipywidgets as widgets
-    from IPython.display import display, clear_output
-    INTERACTIVE_MODE = True
-except ImportError:
-    INTERACTIVE_MODE = False
+from huggingface_hub.utils import HfFolder
+from huggingface_hub import login
+from huggingface_hub import hf_hub_download
 
 # Constants
 HF_REPO_ID = "google/cxr-foundation"
@@ -47,33 +44,54 @@ DIAGNOSIS_TEXT_PROMPTS = {
 
 
 def authenticate_huggingface() -> None:
-    """Authenticate with HuggingFace if no token is set."""
-    from huggingface_hub.utils import HfFolder
-
+    """Authenticate with HuggingFace if no token is available."""
     if HfFolder.get_token() is None:
-        from huggingface_hub import notebook_login
-        notebook_login()
+        print("Please visit: https://huggingface.co/settings/tokens")
+        login()
+        print("Authentication completed")
     else:
-        print("HuggingFace token already set")
+        print("HuggingFace Token already set")
 
 
-def load_precomputed_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_precomputed_data(data_dir: str = "./dataset") -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Download and load precomputed embeddings and labels from HuggingFace.
-    
+
+    Args:
+        input_dir: Directory where downloaded data will be stored
+
     Returns:
         Tuple containing:
         - DataFrame with image embeddings
         - DataFrame with text embeddings
         - DataFrame with labels
     """
-    from huggingface_hub import hf_hub_download
+    
+    data_dir = Path(data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
     
     # Download precomputed image embeddings
     embeddings_path = hf_hub_download(
         repo_id=HF_REPO_ID, 
         filename='embeddings.npz', 
-        subfolder='precomputed_embeddings'
+        subfolder='precomputed_embeddings',
+        local_dir=data_dir
+    )
+    
+    # Download precomputed text embeddings
+    text_embeddings_path = hf_hub_download(
+        repo_id=HF_REPO_ID, 
+        filename='text_embeddings.npz', 
+        subfolder='precomputed_embeddings',
+        local_dir=data_dir
+    )
+    
+    # Download labels
+    labels_path = hf_hub_download(
+        repo_id=HF_REPO_ID, 
+        filename='labels.csv', 
+        subfolder='precomputed_embeddings',
+        local_dir=data_dir
     )
     
     with np.load(embeddings_path) as embeddings_file:
@@ -81,27 +99,13 @@ def load_precomputed_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
             [(key, embeddings_file[key]) for key in embeddings_file.keys()],
             columns=['image_id', 'embeddings']
         )
-    
-    # Download precomputed text embeddings
-    text_embeddings_path = hf_hub_download(
-        repo_id=HF_REPO_ID, 
-        filename='text_embeddings.npz', 
-        subfolder='precomputed_embeddings'
-    )
-    
+
     with np.load(text_embeddings_path) as text_embeddings_file:
         text_embeddings_df = pd.DataFrame(
             [(key, text_embeddings_file[key]) for key in text_embeddings_file.keys()],
             columns=['query', 'embeddings']
         )
-    
-    # Download labels
-    labels_path = hf_hub_download(
-        repo_id=HF_REPO_ID, 
-        filename='labels.csv', 
-        subfolder='precomputed_embeddings'
-    )
-    
+
     labels_df = pd.read_csv(labels_path)
     
     return image_embeddings_df, text_embeddings_df, labels_df
@@ -163,9 +167,9 @@ def zero_shot_classification(
 
 
 def get_text_embeddings_for_diagnosis(
-        diagnosis: str,
-        text_embeddings_df: pd.DataFrame
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    diagnosis: str,
+    text_embeddings_df: pd.DataFrame
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Get positive and negative text embeddings for a specific diagnosis.
     
@@ -309,113 +313,64 @@ def plot_roc_curve(
     return fig
 
 
-def run_interactive_dashboard(
-    image_embeddings_df: pd.DataFrame,
-    text_embeddings_df: pd.DataFrame,
-    labels_df: pd.DataFrame
-) -> None:
+def evaluate_with_custom_prompts(
+        diagnosis: str,
+        labels_df: pd.DataFrame,
+        image_embeddings_df: pd.DataFrame,
+        text_embeddings_df: pd.DataFrame,
+        pos_txt: str,
+        neg_txt: str
+    ) -> None:
     """
-    Run interactive dashboard for zero-shot classification exploration.
+    Evaluate a diagnosis with custom positive and negative text prompts.
     
     Args:
+        diagnosis: Diagnosis to evaluate
+        labels_df: DataFrame with ground truth labels
         image_embeddings_df: DataFrame with image embeddings
         text_embeddings_df: DataFrame with text embeddings
-        labels_df: DataFrame with labels
+        pos_txt: Custom positive text prompt
+        neg_txt: Custom negative text prompt
     """
-    if not INTERACTIVE_MODE:
-        print("Interactive widgets not available. Install ipywidgets to use this feature.")
+    # Check if text prompts exist in embeddings
+    available_queries = set(text_embeddings_df['query'])
+    if pos_txt not in available_queries:
+        print(f"Error: Positive text '{pos_txt}' not found in available text embeddings.")
+        print(f"Available options: {', '.join(sorted(available_queries))}")
         return
     
-    text_embeddings_queries = list(text_embeddings_df['query'])
+    if neg_txt not in available_queries:
+        print(f"Error: Negative text '{neg_txt}' not found in available text embeddings.")
+        print(f"Available options: {', '.join(sorted(available_queries))}")
+        return
     
-    diagnosis_dropdown = widgets.Dropdown(
-        options=DIAGNOSIS_COLUMNS,
-        description='Diagnosis:',
-        disabled=False,
-    )
-
-    text_input_pos = widgets.Combobox(
-        placeholder='Type positive text...',
-        options=text_embeddings_queries,
-        ensure_option=True
-    )
-
-    text_input_neg = widgets.Combobox(
-        placeholder='Type negative text...',
-        options=text_embeddings_queries,
-        ensure_option=True
-    )
-
-    clear_button_pos = widgets.Button(description="Change Positive Text")
-    clear_button_neg = widgets.Button(description="Change Negative Text")
-    clear_button_pos.on_click(lambda b: text_input_pos.set_trait('value', ''))
-    clear_button_neg.on_click(lambda b: text_input_neg.set_trait('value', ''))
-
-    processing = False
-
-    def draw_auc_plot(diagnosis, pos_txt=None, neg_txt=None):
-        nonlocal processing
-        if pos_txt == '' or neg_txt == '' or processing:
-            return
-            
-        processing = True
-        clear_output(True)
-        print('Computing, please wait')
-        
-        if pos_txt is None or neg_txt is None:
-            pos_txt, neg_txt = DIAGNOSIS_TEXT_PROMPTS[diagnosis]
-            text_input_pos.value = pos_txt
-            text_input_neg.value = neg_txt
-
-        roc_auc, fpr, tpr, _ = evaluate_diagnosis(
-            diagnosis, 
-            labels_df, 
-            image_embeddings_df, 
-            text_embeddings_df,
-            pos_txt, 
-            neg_txt
-        )
-
-        clear_output()
-        display(diagnosis_dropdown)
-        
-        plot_roc_curve(fpr, tpr, roc_auc, f"ROC for {diagnosis}")
-        plt.show()
-        
-        # Display text input widgets
-        display(widgets.HBox([
-                widgets.Label(value="Using positive text query"),
-                text_input_pos,
-                clear_button_pos
-            ]))
-        display(widgets.HBox([
-                widgets.Label(value="Negative text query "),
-                text_input_neg,
-                clear_button_neg
-            ]))
-            
-        processing = False
-
-    def update_plot(change):
-        draw_auc_plot(change.new)
-
-    def on_text_change(change):
-        if change.new:
-            draw_auc_plot(diagnosis_dropdown.value, text_input_pos.value, text_input_neg.value)
-
-    diagnosis_dropdown.observe(update_plot, names='value')
-    text_input_pos.observe(on_text_change, names='value')
-    text_input_neg.observe(on_text_change, names='value')
+    print(f"Evaluating {diagnosis} with custom prompts:")
+    print(f"  Positive: '{pos_txt}'")
+    print(f"  Negative: '{neg_txt}'")
     
-    display(diagnosis_dropdown)
-    draw_auc_plot(diagnosis_dropdown.value)
+    roc_auc, fpr, tpr, _ = evaluate_diagnosis(
+        diagnosis, 
+        labels_df, 
+        image_embeddings_df, 
+        text_embeddings_df,
+        pos_txt, 
+        neg_txt
+    )
+    
+    print(f"AUC: {roc_auc:.3f}")
+    
+    # Plot ROC curve
+    plt.figure(figsize=(8, 6))
+    plot_roc_curve(fpr, tpr, roc_auc, f"ROC for {diagnosis}")
+    plt.savefig(f"{diagnosis}_custom_roc.png")
+    plt.show()
 
 
 def evaluate_all_diagnoses(
-    image_embeddings_df: pd.DataFrame,
-    text_embeddings_df: pd.DataFrame,
-    labels_df: pd.DataFrame
-) -> Dict[str, float]:
+        image_embeddings_df: pd.DataFrame,
+        text_embeddings_df: pd.DataFrame,
+        labels_df: pd.DataFrame
+    ) -> Dict[str, float]:
     """
     Evaluate all diagnoses and return AUC scores.
     
@@ -442,17 +397,92 @@ def evaluate_all_diagnoses(
     return results
 
 
+def list_available_text_queries(text_embeddings_df: pd.DataFrame) -> None:
+    """
+    List all available text queries in the text embeddings.
+    
+    Args:
+        text_embeddings_df: DataFrame with text embeddings
+    """
+    print("Available text queries:")
+    for query in sorted(text_embeddings_df['query']):
+        print(f"  - '{query}'")
+
+
 def main():
     """Main function to run the zero-shot classification demo."""
-    authenticate_huggingface()
+    parser = argparse.ArgumentParser(description='CXR Foundation Zero-shot Classification')
+    parser.add_argument('--mode', type=str, default='all', choices=['all', 'single', 'custom', 'list-queries'],
+                        help='Evaluation mode: all diagnoses, single diagnosis, custom prompts, or list available queries')
+    parser.add_argument('--diagnosis', type=str, choices=DIAGNOSIS_COLUMNS,
+                        help='Diagnosis to evaluate (required for single and custom modes)')
+    parser.add_argument('--pos-text', type=str, help='Custom positive text query')
+    parser.add_argument('--neg-text', type=str, help='Custom negative text query')
+    parser.add_argument('--output-dir', type=str, default='results',
+                        help='Directory to save output files')
+    args = parser.parse_args()
     
-    print("Loading precomputed data...")
+    # Create output directory if it doesn't exist
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    
+    # Always authenticate and load data
+    authenticate_huggingface()
     image_embeddings_df, text_embeddings_df, labels_df = load_precomputed_data()
     
-    if INTERACTIVE_MODE:
-        print("\nStarting interactive dashboard...")
-        run_interactive_dashboard(image_embeddings_df, text_embeddings_df, labels_df)
-    else:
+    if args.mode == 'list-queries':
+        list_available_text_queries(text_embeddings_df)
+        return
+    
+    if args.mode == 'single':
+        if args.diagnosis is None:
+            parser.error("--diagnosis is required when mode is 'single'")
+            
+        diagnosis = args.diagnosis
+        pos_txt, neg_txt = DIAGNOSIS_TEXT_PROMPTS[diagnosis]
+        
+        print(f"Evaluating diagnosis: {diagnosis}")
+        print(f"Using default prompts:")
+        print(f"  Positive: '{pos_txt}'")
+        print(f"  Negative: '{neg_txt}'")
+        
+        auc_score, fpr, tpr, _ = evaluate_diagnosis(
+            diagnosis, 
+            labels_df, 
+            image_embeddings_df, 
+            text_embeddings_df
+        )
+        
+        print(f"AUC: {auc_score:.3f}")
+        
+        # Plot and save ROC curve
+        plt.figure(figsize=(8, 6))
+        plot_roc_curve(fpr, tpr, auc_score, f"ROC for {diagnosis}")
+        output_path = os.path.join(args.output_dir, f"{diagnosis}_roc.png")
+        plt.savefig(output_path)
+        print(f"ROC curve saved to {output_path}")
+        plt.close()
+        
+    elif args.mode == 'custom':
+        if args.diagnosis is None or args.pos_text is None or args.neg_text is None:
+            parser.error("--diagnosis, --pos-text, and --neg-text are required when mode is 'custom'")
+            
+        evaluate_with_custom_prompts(
+            args.diagnosis,
+            labels_df,
+            image_embeddings_df,
+            text_embeddings_df,
+            args.pos_text,
+            args.neg_text
+        )
+        
+        # Save ROC curve
+        output_path = os.path.join(args.output_dir, f"{args.diagnosis}_custom_roc.png")
+        plt.savefig(output_path)
+        print(f"ROC curve saved to {output_path}")
+        plt.close()
+        
+    else:  # args.mode == 'all'
         print("\nEvaluating all diagnoses...")
         results = evaluate_all_diagnoses(image_embeddings_df, text_embeddings_df, labels_df)
         
@@ -489,11 +519,47 @@ def main():
             plot_roc_curve(fpr, tpr, auc_score, f"ROC for {diagnosis}", axes[i])
         
         plt.tight_layout()
-        plt.savefig("roc_curves.png")
-        plt.show()
+        output_path = os.path.join(args.output_dir, "all_roc_curves.png")
+        plt.savefig(output_path)
+        print(f"All ROC curves saved to {output_path}")
+        plt.close()
         
         print(f"\nOverall mean AUC: {np.mean(list(results.values())):.3f}")
+        
+        # Save results to CSV
+        results_df = pd.DataFrame([
+            {"diagnosis": diagnosis, "auc": auc}
+            for diagnosis, auc in results.items()
+        ])
+        
+        # Replace append with pd.concat
+        mean_row = pd.DataFrame([{
+            "diagnosis": "MEAN", 
+            "auc": np.mean(list(results.values()))
+        }])
+        results_df = pd.concat([results_df, mean_row], ignore_index=True)
+        
+        csv_path = os.path.join(args.output_dir, "auc_results.csv")
+        results_df.to_csv(csv_path, index=False)
+        print(f"Results saved to {csv_path}")
 
 
 if __name__ == "__main__":
     main()
+
+"""
+# Evaluate all diagnoses (default)
+python cxr_zero_shot_classification.py
+
+# Evaluate a single diagnosis with default prompts
+python cxr_zero_shot_classification.py --mode single --diagnosis PNEUMOTHORAX
+
+# Evaluate with custom text prompts
+python cxr_zero_shot_classification.py --mode custom --diagnosis PNEUMOTHORAX --pos-text "small pneumothorax" --neg-text "no pneumothorax"
+
+# List all available text queries
+python cxr_zero_shot_classification.py --mode list-queries
+
+# Specify output directory
+python cxr_zero_shot_classification.py --output-dir my_results
+"""

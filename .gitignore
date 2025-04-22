@@ -9,6 +9,7 @@ download/*
 pretrained/*
 dataset/*
 wandb/*
+results/*
 
 test_*.py
 test_*.txt
