@@ -10,6 +10,7 @@ The script assumes precomputed embeddings and labels from the NIH ChestX-ray14 d
 """
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -420,23 +421,29 @@ def main():
         diagnosis,
         max_cases_per_category
     )
-    
-    # Load embeddings
-    df_with_embeddings = data_loader.load_embeddings(file_paths["embeddings"], df_labels)
-    
-    print("Data preparation completed.")
-    print(f"DataFrame shape: {df_with_embeddings.shape}")
-    print(df_with_embeddings.head(), "\n")
-
 
     # @title Separate into training, validation, and testing sets.
     # @param {type:"slider", min:0.05, max:0.8, step:0.05}
     TEST_SPLIT = 0.1 
-
     df_train, df_validate = train_test_split(df_labels, test_size=TEST_SPLIT)
 
     print(f"Training set size: {len(df_train)}")
     print(f"Validation set size: {len(df_validate)}")
+
+    # Load embeddings
+    df_train_with_embeddings = data_loader.load_embeddings(file_paths["embeddings"], df_train)
+    
+    print("Data preparation completed.")
+    print(f"DataFrame shape: {df_train_with_embeddings.shape}")
+    print(df_train_with_embeddings.head(), "\n")
+
+    # Load embeddings
+    df_validate_with_embeddings = data_loader.load_embeddings(file_paths["embeddings"], df_validate)
+    
+    print("Data preparation completed.")
+    print(f"DataFrame shape: {df_validate_with_embeddings.shape}")
+    print(df_validate_with_embeddings.head(), "\n")
+
 
 
     """Main function to run the training process."""
@@ -446,7 +453,7 @@ def main():
     # Example usage (commented out as we don't have the actual data)
 
     # Define constants
-    DIAGNOSIS = "Cardiomegaly"  # Example diagnosis
+    DIAGNOSIS = "FRACTURE"  # Example diagnosis
     
     # Configure model
     config = ModelConfig(
@@ -462,8 +469,8 @@ def main():
     
     # Train model
     model = train_model(
-        df_train=df_train,
-        df_validate=df_validate,
+        df_train=df_train_with_embeddings,       # df_train,
+        df_validate=df_validate_with_embeddings, # df_validate,
         diagnosis=DIAGNOSIS,
         config=config,
         epochs=100
@@ -473,6 +480,54 @@ def main():
     save_model(model, 'cxr_classifier_model.pt')
 
 
+
+    # # @title Organize the output and display a sample of the predictions
+    # val_loader = create_data_loader_from_embeddings(
+    #     embeddings=df_validate_with_embeddings["embeddings"],
+    #     labels=df_validate_with_embeddings[diagnosis],
+    #     batch_size=512,
+    #     shuffle=False
+    # )
+    # rows = []
+
+    # for embeddings, labels in val_loader:
+    # #for embeddings, label in val_loader.batch(1):
+    #     row = {
+    #         f'{DIAGNOSIS}_prediction': model(embeddings)[DIAGNOSIS].numpy().flatten()[0],
+    #         f'{DIAGNOSIS}_value': labels.numpy().flatten()[0]
+    #     }
+    #     rows.append(row)
+
+    # eval_df = pd.DataFrame(rows)
+    # eval_df.head()
+
+    # import sklearn
+    # import matplotlib.pyplot as plt
+
+    # def plot_curve(x, y, auc, x_label=None, y_label=None, label=None):
+    #     fig = plt.figure(figsize=(10, 10))
+    #     plt.plot(x, y, label=f'{label} (AUC: %.3f)' % auc, color='black')
+    #     plt.legend(loc='lower right', fontsize=18)
+    #     plt.xlim([-0.01, 1.01])
+    #     plt.ylim([-0.01, 1.01])
+    #     if x_label:
+    #         plt.xlabel(x_label, fontsize=24)
+    #     if y_label:
+    #         plt.ylabel(y_label, fontsize=24)
+    #     plt.xticks(fontsize=12)
+    #     plt.yticks(fontsize=12)
+    #     plt.grid(visible=True)
+
+
+    # labels = eval_df[f'{DIAGNOSIS}_value'].values
+    # predictions = eval_df[f'{DIAGNOSIS}_prediction'].values
+    # false_positive_rate, true_positive_rate, thresholds = sklearn.metrics.roc_curve(
+    #     labels,
+    #     predictions,
+    #     drop_intermediate=False)
+    # auc = sklearn.metrics.roc_auc_score(labels, predictions)
+    # plot_curve(false_positive_rate, true_positive_rate, auc, x_label='False Positive Rate', y_label='True Positive Rate', label=DIAGNOSIS)
+    # plt.show()
 
 if __name__ == "__main__":
     main()
